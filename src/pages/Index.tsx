@@ -10,6 +10,10 @@ import Icon from "@/components/ui/icon";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("главная");
   const [selectedTopic, setSelectedTopic] = useState(null);
+  const [currentUser, setCurrentUser] = useState("");
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [messages, setMessages] = useState([]);
 
   const forumTopics = [
     {
@@ -41,7 +45,7 @@ const Index = () => {
     }
   ];
 
-  const chatMessages = [
+  const baseChatMessages = [
     {
       id: 1,
       author: "Алексей М.",
@@ -67,6 +71,37 @@ const Index = () => {
       likes: 7
     }
   ];
+
+  const chatMessages = [...baseChatMessages, ...messages];
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim()) return;
+    
+    if (!currentUser) {
+      setShowNameInput(true);
+      return;
+    }
+
+    const newMsg = {
+      id: Date.now(),
+      author: currentUser,
+      rating: Math.floor(Math.random() * 1000) + 100,
+      message: newMessage,
+      time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      likes: 0
+    };
+
+    setMessages([...messages, newMsg]);
+    setNewMessage("");
+  };
+
+  const handleSetName = (name) => {
+    if (name.trim()) {
+      setCurrentUser(name.trim());
+      setShowNameInput(false);
+      handleSendMessage();
+    }
+  };
 
   const renderMainPage = () => (
     <div className="space-y-6">
@@ -140,7 +175,7 @@ const Index = () => {
 
       <div className="space-y-4 max-h-96 overflow-y-auto">
         {chatMessages.map(msg => (
-          <Card key={msg.id} className="border border-gray-200">
+          <Card key={msg.id} className="border border-gray-200 animate-fade-in">
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center space-x-2">
@@ -153,6 +188,11 @@ const Index = () => {
                   <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">
                     {msg.rating}
                   </Badge>
+                  {msg.author === currentUser && (
+                    <Badge className="text-xs bg-black text-white">
+                      Вы
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <span>{msg.time}</span>
@@ -168,22 +208,81 @@ const Index = () => {
         ))}
       </div>
 
-      <Card className="border border-gray-200">
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <Avatar className="w-8 h-8">
-              <AvatarFallback className="bg-gray-200 text-black">В</AvatarFallback>
-            </Avatar>
-            <Input 
-              placeholder="Написать сообщение..." 
-              className="flex-1 border-gray-300 focus:border-black"
-            />
-            <Button className="bg-black text-white hover:bg-gray-800">
-              <Icon name="Send" size={16} />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {showNameInput ? (
+        <Card className="border border-gray-200">
+          <CardContent className="p-4">
+            <div className="text-center mb-4">
+              <p className="text-gray-600 mb-2">Введите ваше имя для отправки сообщения:</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-gray-200 text-black">?</AvatarFallback>
+              </Avatar>
+              <Input 
+                placeholder="Ваше имя..." 
+                className="flex-1 border-gray-300 focus:border-black"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSetName(e.target.value);
+                  }
+                }}
+                autoFocus
+              />
+              <Button 
+                className="bg-black text-white hover:bg-gray-800"
+                onClick={(e) => {
+                  const input = e.target.parentElement.querySelector('input');
+                  handleSetName(input.value);
+                }}
+              >
+                <Icon name="Check" size={16} />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border border-gray-200">
+          <CardContent className="p-4">
+            {currentUser && (
+              <div className="text-sm text-gray-500 mb-2">
+                Вы пишете как <span className="font-medium text-black">{currentUser}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="ml-2 h-6 px-2 text-xs hover:bg-gray-100"
+                  onClick={() => setCurrentUser("")}
+                >
+                  Сменить
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-gray-200 text-black">
+                  {currentUser ? currentUser.charAt(0) : "?"}
+                </AvatarFallback>
+              </Avatar>
+              <Input 
+                placeholder={currentUser ? "Написать сообщение..." : "Введите имя и сообщение..."}
+                className="flex-1 border-gray-300 focus:border-black"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSendMessage();
+                  }
+                }}
+              />
+              <Button 
+                className="bg-black text-white hover:bg-gray-800"
+                onClick={handleSendMessage}
+              >
+                <Icon name="Send" size={16} />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -219,7 +318,17 @@ const Index = () => {
               </Button>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
+              {currentUser && (
+                <div className="flex items-center space-x-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-gray-200 text-black text-sm">
+                      {currentUser.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-black">{currentUser}</span>
+                </div>
+              )}
               <div className="relative">
                 <Icon name="Search" size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input 
